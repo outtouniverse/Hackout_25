@@ -1,125 +1,92 @@
-# Backend API with MongoDB Atlas
+# Hacout Backend API
 
-A robust Node.js backend with Express.js, MongoDB Atlas, JWT authentication, and comprehensive validation.
+A clean and structured Node.js backend API for user authentication and mangrove incident reporting.
 
 ## Features
 
-- 🔐 **JWT Authentication** - Secure login/signup with token-based authentication
-- 🗄️ **MongoDB Atlas Integration** - Cloud-hosted MongoDB database
-- ✅ **Input Validation** - Comprehensive validation using express-validator
-- 🛡️ **Security Middleware** - Helmet, CORS, Rate Limiting
-- 🔒 **Password Hashing** - Secure password storage using bcryptjs
-- 📝 **Error Handling** - Centralized error handling with proper HTTP status codes
-- 🚀 **RESTful API** - Clean and organized API endpoints
+- User registration and login
+- JWT-based authentication
+- Role-based user system (community, NGO, govt)
+- Profile management
+- Mangrove incident reporting system
+- Input validation
+- MongoDB integration
 
 ## API Endpoints
 
-### Authentication Routes
+### Authentication
 
-| Method | Endpoint | Description | Access |
-|--------|----------|-------------|---------|
-| POST | `/api/auth/register` | User registration | Public |
-| POST | `/api/auth/login` | User login | Public |
-| GET | `/api/auth/me` | Get current user | Private |
-| PUT | `/api/auth/updatedetails` | Update user details | Private |
-| PUT | `/api/auth/updatepassword` | Update password | Private |
-| POST | `/api/auth/logout` | User logout | Private |
+| Method | Endpoint | Description | Request Body | Response |
+|--------|----------|-------------|--------------|----------|
+| POST | `/auth/register` | Register new user | `{ name, email, password, role, phone, location }` | User object + JWT |
+| POST | `/auth/login` | User login | `{ email, password }` | JWT + user details |
+| GET | `/auth/profile` | Get logged-in user profile | Header: Bearer token | User object |
+| PUT | `/auth/profile` | Update profile | `{ name?, phone?, location?, photo? }` | Updated user |
+| POST | `/auth/logout` | Logout user | - | `{ success: true }` |
+
+### Reports
+
+| Method | Endpoint | Description | Request Body | Response |
+|--------|----------|-------------|--------------|----------|
+| POST | `/reports` | Create new incident report | `{ type, description, photo, lat, lng }` | Report object |
+| GET | `/reports` | Get all reports (filterable) | `?status=open&userId=xxx&type=cutting` | `[reports...]` |
+| GET | `/reports/:id` | Get specific report | - | Report object |
+| PUT | `/reports/:id` | Update a report (by user before validation) | `{ description?, photo? }` | Updated report |
+| DELETE | `/reports/:id` | Delete user's report | - | `{ success: true }` |
 
 ### Health Check
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | Server health status |
+| Method | Endpoint | Description | Response |
+|--------|----------|-------------|----------|
+| GET | `/api/health` | Server health check | `{ success: true, message: "Server is running" }` |
 
-## Request Examples
+## User Roles
 
-### User Registration
-```bash
-POST /api/auth/register
-Content-Type: application/json
+- `community` - Community members
+- `NGO` - Non-governmental organizations
+- `govt` - Government entities
 
-{
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "SecurePass123"
-}
-```
+## Report Types
 
-### User Login
-```bash
-POST /api/auth/login
-Content-Type: application/json
+- `cutting` - Mangrove cutting incidents
+- `dumping` - Waste dumping incidents
+- `pollution` - Pollution incidents
+- `land_reclamation` - Land reclamation incidents
+- `other` - Other incidents
 
-{
-  "email": "john@example.com",
-  "password": "SecurePass123"
-}
-```
+## Report Status
 
-### Update User Details (Protected Route)
-```bash
-PUT /api/auth/updatedetails
-Authorization: Bearer <your-jwt-token>
-Content-Type: application/json
+- `open` - New report, pending validation
+- `validated` - Report has been validated
+- `resolved` - Issue has been resolved
+- `rejected` - Report was rejected
 
-{
-  "name": "John Smith",
-  "email": "johnsmith@example.com"
-}
-```
+## Setup
 
-## Validation Rules
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-### Registration
-- **Name**: 2-50 characters, letters and spaces only
-- **Email**: Valid email format, unique in database
-- **Password**: Minimum 6 characters, must contain uppercase, lowercase, and number
+2. Create a `.env` file with:
+   ```
+   NODE_ENV=development
+   PORT=3000
+   MONGODB_URI=mongodb://localhost:27017/hacout_db
+   JWT_SECRET=your_jwt_secret_key_here
+   JWT_EXPIRE=30d
+   ```
 
-### Login
-- **Email**: Valid email format
-- **Password**: Required
+3. Start the server:
+   ```bash
+   npm run dev
+   ```
 
-## Running the Application
+## Technologies Used
 
-### Development Mode
-```bash
-npm run dev
-```
-
-### Production Mode
-```bash
-npm start
-```
-
-The server will start on port 3000 (or the port specified in your environment variables).
-
-## Security Features
-
-- **JWT Tokens**: Secure authentication tokens
-- **Password Hashing**: Bcrypt password encryption
-- **Rate Limiting**: API rate limiting to prevent abuse
-- **CORS Protection**: Cross-origin resource sharing protection
-- **Helmet**: Security headers middleware
-- **Input Validation**: Comprehensive request validation
-- **Error Handling**: Secure error messages (no sensitive data exposure)
-
-## Error Handling
-
-The API returns consistent error responses:
-
-```json
-{
-  "success": false,
-  "error": "Error message here"
-}
-```
-
-Common HTTP Status Codes:
-- `200` - Success
-- `201` - Created
-- `400` - Bad Request (validation errors)
-- `401` - Unauthorized (invalid/missing token)
-- `403` - Forbidden (insufficient permissions)
-- `404` - Not Found
-- `500` - Internal Server Error
-=
+- Node.js
+- Express.js
+- MongoDB with Mongoose
+- JWT for authentication
+- bcryptjs for password hashing
+- express-validator for input validation

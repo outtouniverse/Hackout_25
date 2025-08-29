@@ -28,8 +28,22 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'],
-    default: 'user'
+    enum: ['community', 'NGO', 'govt'],
+    required: [true, 'Please provide a role']
+  },
+  phone: {
+    type: String,
+    required: [true, 'Please provide a phone number'],
+    match: [/^\+?[\d\s-()]+$/, 'Please provide a valid phone number']
+  },
+  location: {
+    type: String,
+    required: [true, 'Please provide a location'],
+    trim: true
+  },
+  photo: {
+    type: String,
+    default: null
   },
   isVerified: {
     type: Boolean,
