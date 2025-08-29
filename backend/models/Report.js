@@ -42,6 +42,19 @@ const reportSchema = new mongoose.Schema({
     },
     coordinates: [Number]
   },
+  validationNotes: {
+    type: String,
+    default: ''
+  },
+  validatedAt: {
+    type: Date,
+    default: null
+  },
+  validatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

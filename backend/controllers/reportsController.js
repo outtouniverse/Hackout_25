@@ -197,3 +197,77 @@ exports.deleteReport = async (req, res) => {
     });
   }
 };
+
+// ===== VALIDATION FUNCTIONS =====
+
+// @desc    Validate report (AI-assisted + manual)
+// @route   POST /reports/:id/validate
+// @access  Private (Admin only)
+exports.validateReport = async (req, res) => {
+  try {
+    const { status, notes } = req.body;
+
+    if (!status || !['valid', 'invalid'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Status must be either "valid" or "invalid"'
+      });
+    }
+
+    const report = await Report.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: 'Report not found'
+      });
+    }
+
+    // Update report status and add validation notes
+    const updatedReport = await Report.findByIdAndUpdate(
+      req.params.id,
+      {
+        status: status === 'valid' ? 'validated' : 'rejected',
+        validationNotes: notes || '',
+        validatedAt: Date.now(),
+        validatedBy: req.user.id
+      },
+      { new: true }
+    ).populate('userId', 'name email role');
+
+    res.status(200).json({
+      success: true,
+      message: `Report ${status === 'valid' ? 'validated' : 'rejected'} successfully`,
+      data: updatedReport
+    });
+  } catch (error) {
+    console.error('Validate report error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while validating report'
+    });
+  }
+};
+
+// @desc    Get all pending reports for validation
+// @route   GET /reports/pending
+// @access  Private (Admin only)
+exports.getPendingReports = async (req, res) => {
+  try {
+    const pendingReports = await Report.find({ status: 'open' })
+      .populate('userId', 'name email role')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: pendingReports.length,
+      data: pendingReports
+    });
+  } catch (error) {
+    console.error('Get pending reports error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching pending reports'
+    });
+  }
+};

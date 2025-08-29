@@ -10,6 +10,9 @@ A clean and structured Node.js backend API for user authentication and mangrove 
 - Profile management
 - Mangrove incident reporting system
 - Admin panel for government users
+- Report validation system
+- Notification system
+- Gamification and rewards
 - Input validation
 - MongoDB integration
 
@@ -34,6 +37,8 @@ A clean and structured Node.js backend API for user authentication and mangrove 
 | GET | `/reports/:id` | Get specific report | - | Report object |
 | PUT | `/reports/:id` | Update a report (by user before validation) | `{ description?, photo? }` | Updated report |
 | DELETE | `/reports/:id` | Delete user's report | - | `{ success: true }` |
+| POST | `/reports/:id/validate` | Validate report (AI-assisted + manual) | `{ status: "valid" \| "invalid", notes? }` | Updated report |
+| GET | `/reports/pending` | Get all pending reports for validation | - | `[reports...]` |
 
 ### Admin (Government Users Only)
 
@@ -43,6 +48,21 @@ A clean and structured Node.js backend API for user authentication and mangrove 
 | PUT | `/auth/admin/users/:id/ban` | Ban user | `{ reason }` | `{ success: true }` |
 | GET | `/auth/admin/stats` | Get system-wide stats | - | `{ totalUsers, totalReports, validatedReports, mangrovesSaved }` |
 | GET | `/auth/admin/map` | Heatmap view data | - | `[ {lat, lng, type, status}, ... ]` |
+
+### Notifications (Admin Only)
+
+| Method | Endpoint | Description | Request Body | Response |
+|--------|----------|-------------|--------------|----------|
+| POST | `/auth/notifications/send` | Send push/SMS/email notification | `{ userId, message, type }` | `{ success: true }` |
+| GET | `/auth/notifications/:userId` | Get user's notifications | - | `[notifications...]` |
+
+### Gamification
+
+| Method | Endpoint | Description | Request Body | Response |
+|--------|----------|-------------|--------------|----------|
+| GET | `/auth/gamification/leaderboard` | Get top users by points | `?region=xyz` | `[users ranked...]` |
+| GET | `/auth/gamification/user/:id` | Get gamification details of a user | - | `{ points, badges, reportsCount }` |
+| POST | `/auth/gamification/rewards/redeem` | Redeem reward | `{ rewardId }` | `{ success, rewardDetails }` |
 
 ### Health Check
 
@@ -76,6 +96,19 @@ A clean and structured Node.js backend API for user authentication and mangrove 
 - `active` - User account is active
 - `banned` - User account is banned
 - `inactive` - User account is inactive
+
+## Notification Types
+
+- `push` - Push notification
+- `sms` - SMS notification
+- `email` - Email notification
+
+## Gamification System
+
+- **Points**: Earned through reports and validations
+- **Badges**: Achievement-based rewards
+- **Leaderboard**: Regional and global rankings
+- **Rewards**: Redeemable for real-world benefits
 
 ## Setup
 
