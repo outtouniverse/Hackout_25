@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Report = require('../models/Report');
 
 // @desc    Register new user (community, NGO, govt)
 // @route   POST /api/auth/register
@@ -169,6 +170,143 @@ exports.logout = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error during logout'
+    });
+  }
+};
+
+// ===== ADMIN FUNCTIONS =====
+
+// @desc    Get all users (filterable)
+// @route   GET /admin/users
+// @access  Private (Admin only)
+exports.getAllUsers = async (req, res) => {
+  try {
+    const { role, status } = req.query;
+    
+    // Build filter object - exclude current admin user
+    const filter = { _id: { $ne: req.user.id } };
+    if (role) filter.role = role;
+    if (status) filter.status = status;
+
+    const users = await User.find(filter)
+      .select('-password')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      data: users
+    });
+  } catch (error) {
+    console.error('Get all users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching users'
+    });
+  }
+};
+
+// @desc    Ban user
+// @route   PUT /admin/users/:id/ban
+// @access  Private (Admin only)
+exports.banUser = async (req, res) => {
+  try {
+    const { reason } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ban reason is required'
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { 
+        status: 'banned',
+        banReason: reason,
+        bannedAt: Date.now()
+      },
+      { new: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'User banned successfully',
+      data: user
+    });
+  } catch (error) {
+    console.error('Ban user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while banning user'
+    });
+  }
+};
+
+// @desc    Get system-wide stats
+// @route   GET /admin/stats
+// @access  Private (Admin only)
+exports.getSystemStats = async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const totalReports = await Report.countDocuments();
+    const validatedReports = await Report.countDocuments({ status: 'validated' });
+    
+    // Calculate mangroves saved (example metric)
+    const mangrovesSaved = validatedReports * 10; // Assuming each validated report saves 10 mangroves
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalUsers,
+        totalReports,
+        validatedReports,
+        mangrovesSaved
+      }
+    });
+  } catch (error) {
+    console.error('Get stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching stats'
+    });
+  }
+};
+
+// @desc    Get heatmap view data
+// @route   GET /admin/map
+// @access  Private (Admin only)
+exports.getMapData = async (req, res) => {
+  try {
+    const reports = await Report.find({})
+      .select('lat lng type status')
+      .sort({ createdAt: -1 });
+
+    const mapData = reports.map(report => ({
+      lat: report.lat,
+      lng: report.lng,
+      type: report.type,
+      status: report.status
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: mapData.length,
+      data: mapData
+    });
+  } catch (error) {
+    console.error('Get map data error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching map data'
     });
   }
 };

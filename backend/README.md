@@ -9,6 +9,7 @@ A clean and structured Node.js backend API for user authentication and mangrove 
 - Role-based user system (community, NGO, govt)
 - Profile management
 - Mangrove incident reporting system
+- Admin panel for government users
 - Input validation
 - MongoDB integration
 
@@ -34,6 +35,15 @@ A clean and structured Node.js backend API for user authentication and mangrove 
 | PUT | `/reports/:id` | Update a report (by user before validation) | `{ description?, photo? }` | Updated report |
 | DELETE | `/reports/:id` | Delete user's report | - | `{ success: true }` |
 
+### Admin (Government Users Only)
+
+| Method | Endpoint | Description | Request Body | Response |
+|--------|----------|-------------|--------------|----------|
+| GET | `/auth/admin/users` | Get all users (filterable) | `?role=community` | `[users...]` |
+| PUT | `/auth/admin/users/:id/ban` | Ban user | `{ reason }` | `{ success: true }` |
+| GET | `/auth/admin/stats` | Get system-wide stats | - | `{ totalUsers, totalReports, validatedReports, mangrovesSaved }` |
+| GET | `/auth/admin/map` | Heatmap view data | - | `[ {lat, lng, type, status}, ... ]` |
+
 ### Health Check
 
 | Method | Endpoint | Description | Response |
@@ -44,7 +54,7 @@ A clean and structured Node.js backend API for user authentication and mangrove 
 
 - `community` - Community members
 - `NGO` - Non-governmental organizations
-- `govt` - Government entities
+- `govt` - Government entities (admin access)
 
 ## Report Types
 
@@ -60,6 +70,12 @@ A clean and structured Node.js backend API for user authentication and mangrove 
 - `validated` - Report has been validated
 - `resolved` - Issue has been resolved
 - `rejected` - Report was rejected
+
+## User Status
+
+- `active` - User account is active
+- `banned` - User account is banned
+- `inactive` - User account is inactive
 
 ## Setup
 

@@ -121,6 +121,16 @@ const validateReport = [
   handleValidationErrors
 ];
 
+// Validation rules for admin operations
+const validateBanUser = [
+  body('reason')
+    .trim()
+    .isLength({ min: 5, max: 200 })
+    .withMessage('Ban reason must be between 5 and 200 characters'),
+  
+  handleValidationErrors
+];
+
 // Validation rules for password update
 const validatePasswordUpdate = [
   body('currentPassword')
@@ -142,5 +152,6 @@ module.exports = {
   validateLogin,
   validateProfileUpdate,
   validateReport,
+  validateBanUser,
   validatePasswordUpdate
 };

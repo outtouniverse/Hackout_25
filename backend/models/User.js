@@ -45,6 +45,19 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  status: {
+    type: String,
+    enum: ['active', 'banned', 'inactive'],
+    default: 'active'
+  },
+  banReason: {
+    type: String,
+    default: null
+  },
+  bannedAt: {
+    type: Date,
+    default: null
+  },
   isVerified: {
     type: Boolean,
     default: false
