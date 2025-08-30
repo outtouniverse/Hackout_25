@@ -21,12 +21,14 @@ const {
   getUserNotifications,
   getLeaderboard,
   getUserGamification,
+  getCurrentUserStats,
   redeemReward
 } = require('../controllers/authController');
 
 // Public routes
 router.post('/register', validateRegistration, register);
 router.post('/login', validateLogin, login);
+router.get('/gamification/leaderboard', getLeaderboard);
 
 // Protected routes
 router.use(protect); // All routes after this middleware are protected
@@ -45,7 +47,7 @@ router.post('/notifications/send', authorize('govt'), sendNotification);
 router.get('/notifications/:userId', authorize('govt'), getUserNotifications);
 
 // Gamification routes (all authenticated users)
-router.get('/gamification/leaderboard', getLeaderboard);
+router.get('/gamification/user/me', getCurrentUserStats);
 router.get('/gamification/user/:id', getUserGamification);
 router.post('/gamification/rewards/redeem', redeemReward);
 

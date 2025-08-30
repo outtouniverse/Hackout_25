@@ -421,7 +421,7 @@ exports.getUserNotifications = async (req, res) => {
 
 // ===== GAMIFICATION FUNCTIONS =====
 
-// @desc    Get top users by points
+// @desc    Get leaderboard
 // @route   GET /gamification/leaderboard
 // @access  Private
 exports.getLeaderboard = async (req, res) => {
@@ -434,14 +434,21 @@ exports.getLeaderboard = async (req, res) => {
 
     // Get users with their points and rank them
     const users = await User.find(filter)
-      .select('name role location points reportsCount badges')
-      .sort({ points: -1 })
-      .limit(50); // Top 50 users
+      .select('name role location totalPoints photo')
+      .sort({ totalPoints: -1 })
+      .limit(100); // Top 100 users
 
     // Add ranking
     const rankedUsers = users.map((user, index) => ({
       rank: index + 1,
-      ...user.toObject()
+      id: user._id,
+      name: user.name,
+      role: user.role,
+      location: user.location,
+      points: user.totalPoints || 0,
+      photo: user.photo,
+      // Generate avatar if no photo
+      avatar: user.photo || generateAvatar(user.name),
     }));
 
     res.status(200).json({
@@ -457,6 +464,25 @@ exports.getLeaderboard = async (req, res) => {
     });
   }
 };
+
+// Helper function to generate avatar from name
+function generateAvatar(name) {
+  const initials = name
+    .split(' ')
+    .map(word => word.charAt(0))
+    .join('')
+    .toUpperCase()
+    .substring(0, 2);
+  
+  // Generate a consistent color based on name
+  const colors = [
+    '#E5E7EB', '#F3E8FF', '#DBEAFE', '#FEE2E2', '#D1FAE5',
+    '#FEF3C7', '#FCE7F3', '#E0E7FF', '#F0FDF4', '#FEF2F2'
+  ];
+  const colorIndex = name.length % colors.length;
+  
+  return `https://placehold.co/100x100/${colors[colorIndex].substring(1)}/374151?text=${initials}`;
+}
 
 // @desc    Get gamification details of a user
 // @route   GET /gamification/user/:id
@@ -590,6 +616,69 @@ exports.redeemReward = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error while redeeming reward'
+    });
+  }
+};
+
+// @desc    Get current user's gamification stats and rank
+// @route   GET /gamification/user/me
+// @access  Private
+exports.getCurrentUserStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get current user's points
+    const currentUser = await User.findById(userId)
+      .select('name role location totalPoints photo');
+
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Get user's rank by finding how many users have more points
+    const rank = await User.countDocuments({ totalPoints: { $gt: currentUser.totalPoints || 0 } }) + 1;
+
+    // Get user's reports count
+    const reportsCount = await Report.countDocuments({ userId });
+    const validReports = await Report.countDocuments({ 
+      userId, 
+      status: 'validated' 
+    });
+
+    // Generate badges based on activity
+    const badges = [];
+    if (reportsCount >= 10) badges.push('Dedicated Reporter');
+    if (validReports >= 5) badges.push('Trusted Source');
+    if (reportsCount >= 50) badges.push('Mangrove Guardian');
+    if (validReports >= 20) badges.push('Expert Validator');
+
+    const userStats = {
+      id: currentUser._id,
+      name: currentUser.name,
+      role: currentUser.role,
+      location: currentUser.location,
+      points: currentUser.totalPoints || 0,
+      rank: rank,
+      photo: currentUser.photo,
+      avatar: currentUser.photo || generateAvatar(currentUser.name),
+      badges: badges,
+      reportsCount: reportsCount,
+      validReports: validReports,
+      accuracy: reportsCount > 0 ? Math.round((validReports / reportsCount) * 100) : 0
+    };
+
+    res.status(200).json({
+      success: true,
+      data: userStats
+    });
+  } catch (error) {
+    console.error('Get current user stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching user stats'
     });
   }
 };
