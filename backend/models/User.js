@@ -45,15 +45,20 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  // Admin fields
   status: {
     type: String,
     enum: ['active', 'banned', 'inactive'],
     default: 'active'
   },
-  banReason: {
-    type: String,
-    default: null
+  
+  // Gamification fields
+  totalPoints: {
+    type: Number,
+    default: 0
   },
+  
+  banReason: String,
   bannedAt: {
     type: Date,
     default: null

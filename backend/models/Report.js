@@ -42,6 +42,25 @@ const reportSchema = new mongoose.Schema({
     },
     coordinates: [Number]
   },
+  // AI Analysis Fields
+  aiStatus: {
+    type: String,
+    enum: ['pending', 'ai_approved', 'ai_rejected', 'ai_error', 'ai_disabled', 'ai_quota_exceeded'],
+    default: 'pending'
+  },
+  aiNotes: {
+    type: String,
+    default: ''
+  },
+  aiAnalysis: {
+    isValid: Boolean,
+    confidence: Number,
+    notes: String,
+    issues: String,
+    recommendations: String,
+    timestamp: Date,
+    model: String
+  },
   validationNotes: {
     type: String,
     default: ''

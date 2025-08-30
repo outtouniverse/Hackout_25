@@ -9,7 +9,8 @@ const {
   updateReport,
   deleteReport,
   validateReport: validateReportFunc,
-  getPendingReports
+  getPendingReports,
+  getAIAnalysis
 } = require('../controllers/reportsController');
 
 // All routes are protected
@@ -21,6 +22,9 @@ router.get('/', getReports);
 router.get('/:id', getReport);
 router.put('/:id', validateReport, updateReport);
 router.delete('/:id', deleteReport);
+
+// AI Analysis route
+router.get('/:id/ai-analysis', getAIAnalysis);
 
 // Admin-only routes (protected + admin role required)
 router.get('/pending', authorize('govt'), getPendingReports);

@@ -146,6 +146,47 @@ const validatePasswordUpdate = [
   handleValidationErrors
 ];
 
+// Validate upload creation
+const validateUpload = [
+  body('title')
+    .trim()
+    .isLength({ min: 3, max: 100 })
+    .withMessage('Title must be between 3 and 100 characters'),
+  
+  body('description')
+    .trim()
+    .isLength({ min: 10, max: 500 })
+    .withMessage('Description must be between 10 and 500 characters'),
+  
+  body('imageUrl')
+    .isURL()
+    .withMessage('Please provide a valid image URL'),
+  
+  body('category')
+    .isIn(['mangrove_health', 'mangrove_destruction', 'mangrove_conservation', 'mangrove_research', 'other'])
+    .withMessage('Invalid category selected'),
+  
+  body('lat')
+    .isFloat({ min: -90, max: 90 })
+    .withMessage('Latitude must be between -90 and 90'),
+  
+  body('lng')
+    .isFloat({ min: -180, max: 180 })
+    .withMessage('Longitude must be between -180 and 180'),
+  
+  body('tags')
+    .optional()
+    .isArray()
+    .withMessage('Tags must be an array'),
+  
+  body('tags.*')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ min: 1, max: 20 })
+    .withMessage('Each tag must be between 1 and 20 characters')
+];
+
 module.exports = {
   handleValidationErrors,
   validateRegistration,
@@ -153,5 +194,6 @@ module.exports = {
   validateProfileUpdate,
   validateReport,
   validateBanUser,
-  validatePasswordUpdate
+  validatePasswordUpdate,
+  validateUpload,
 };

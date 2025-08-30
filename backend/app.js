@@ -11,8 +11,9 @@ const connectDB = require('./config/database');
 // Connect to MongoDB
 connectDB();
 
-var authRouter = require('./routes/auth');
-var reportsRouter = require('./routes/reports');
+const authRouter = require('./routes/auth');
+const reportsRouter = require('./routes/reports');
+const uploadsRouter = require('./routes/uploads');
 
 var app = express();
 
@@ -24,6 +25,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/auth', authRouter);
 app.use('/reports', reportsRouter);
+app.use('/uploads', uploadsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
