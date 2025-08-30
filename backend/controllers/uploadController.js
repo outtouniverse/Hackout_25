@@ -370,26 +370,171 @@ exports.getUploadLeaderboard = async (req, res) => {
 
 // @desc    Analyze upload with Gemini AI
 // @access  Private
+// async function analyzeUploadWithAI(uploadId, imageUrl, category, description) {
+//   try {
+//     // Update status to analyzing
+//     await Upload.findByIdAndUpdate(uploadId, {
+//       "aiAnalysis.status": "analyzing",
+//     });
+
+//     // Check if Gemini API key is available
+//     if (!process.env.GEMINI_API_KEY) {
+//       await handleAIFailure(uploadId, "Gemini API key not configured");
+//       return;
+//     }
+
+//     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+//     // Convert base64 to image data for AI analysis
+//     const imageData = {
+//       fileData: {
+//         fileUri: imageUrl, // direct Cloudinary URL
+//         mimeType: "image/jpeg",
+//       },
+//     };
+
+//     const prompt = `
+//     You are a mangrove conservation expert. Analyze this image for mangrove-related content.
+
+//     Category: ${category}
+//     Description: ${description}
+
+//     CRITICAL: Only analyze for MANGROVE-related content. Ignore other trees, plants, or unrelated content.
+
+//     Please analyze this image and provide:
+//     1. Accuracy score (0-100): How well this image represents the described category
+//     2. Confidence score (0-100): How confident you are in your analysis
+//     3. Quality assessment: excellent/good/fair/poor
+//     4. Mangrove evidence: Describe what mangrove features you see
+//     5. Notes: Detailed analysis of the image
+//     6. Issues: Any problems with the image
+//     7. Recommendations: How to improve the image
+
+//     Respond with JSON format only:
+//     {
+//       "accuracy": 85,
+//       "confidence": 90,
+//       "quality": "good",
+//       "mangroveEvidence": "Clear prop roots visible, coastal environment",
+//       "notes": "Image shows healthy mangrove ecosystem with clear identification features",
+//       "issues": "Slight blur in background",
+//       "recommendations": "Image is good quality, shows clear mangrove features"
+//     }
+
+//     IMPORTANT: If this is NOT a mangrove ecosystem, set accuracy to 0 and explain why.
+//     `;
+
+//     const result = await model.generateContent([prompt, imageData]);
+//     const response = await result.response;
+//     const text = response.text();
+
+//     // Parse AI response
+//     let aiResponse;
+//     try {
+//       const jsonMatch = text.match(/\{[\s\S]*\}/);
+//       if (jsonMatch) {
+//         aiResponse = JSON.parse(jsonMatch[0]);
+//       } else {
+//         throw new Error("No JSON found in response");
+//       }
+//     } catch (parseError) {
+//       // Fallback parsing
+//       const lowerText = text.toLowerCase();
+//       aiResponse = {
+//         accuracy: lowerText.includes("mangrove") ? 60 : 0,
+//         confidence: 70,
+//         quality: "fair",
+//         mangroveEvidence: "Response parsing failed",
+//         notes: text,
+//         issues: "Could not parse AI response properly",
+//         recommendations: "Manual review recommended",
+//       };
+//     }
+
+//     // Validate and process AI response
+//     const validatedAnalysis = {
+//       status: "completed",
+//       accuracy: Math.min(Math.max(Number(aiResponse.accuracy) || 0, 0), 100),
+//       confidence: Math.min(
+//         Math.max(Number(aiResponse.confidence) || 70, 0),
+//         100
+//       ),
+//       quality: ["excellent", "good", "fair", "poor"].includes(
+//         aiResponse.quality
+//       )
+//         ? aiResponse.quality
+//         : "fair",
+//       mangroveEvidence: String(
+//         aiResponse.mangroveEvidence ||
+//           "Mangrove evidence not clearly identified"
+//       ),
+//       notes: String(aiResponse.notes || "AI analysis completed"),
+//       issues: String(aiResponse.issues || "None identified"),
+//       recommendations: String(
+//         aiResponse.recommendations || "Image appears suitable"
+//       ),
+//       analyzedAt: new Date(),
+//     };
+
+//     // Calculate rewards
+//     const upload = await Upload.findById(uploadId);
+//     const points = upload.calculatePoints();
+//     const badges = upload.assignBadges();
+
+//     // Update upload with AI analysis and rewards
+//     await Upload.findByIdAndUpdate(uploadId, {
+//       aiAnalysis: validatedAnalysis,
+//       "rewards.points": points,
+//       "rewards.badges": badges,
+//       "rewards.status": points >= 30 ? "approved" : "rejected",
+//       "rewards.approvedAt": points >= 30 ? new Date() : null,
+//       status: points >= 30 ? "approved" : "rejected",
+//     });
+
+//     // Update user's total points
+//     await User.findByIdAndUpdate(upload.userId, {
+//       $inc: { totalPoints: points },
+//     });
+
+//     console.log(
+//       `AI analysis completed for upload ${uploadId}: ${points} points, ${badges.length} badges`
+//     );
+//   } catch (error) {
+//     console.error("AI analysis error:", error);
+//     await handleAIFailure(uploadId, error.message);
+//   }
+// }
+
+const axios = require("axios");
+
 async function analyzeUploadWithAI(uploadId, imageUrl, category, description) {
   try {
-    // Update status to analyzing
     await Upload.findByIdAndUpdate(uploadId, {
       "aiAnalysis.status": "analyzing",
     });
 
-    // Check if Gemini API key is available
     if (!process.env.GEMINI_API_KEY) {
       await handleAIFailure(uploadId, "Gemini API key not configured");
       return;
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    // NOTE: 'gemini-1.5-flash' is a valid model. 'gemini-2.0-flash' may not be available.
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // Convert base64 to image data for AI analysis
-    const imageData = {
-      fileData: {
-        fileUri: imageUrl, // direct Cloudinary URL
-        mimeType: "image/jpeg",
+    // 1. Fetch the image data from the URL
+    const imageResponse = await axios.get(imageUrl, {
+      responseType: "arraybuffer",
+    });
+    const imageBase64 = Buffer.from(imageResponse.data, "binary").toString(
+      "base64"
+    );
+
+    // 2. Prepare the image data for the AI in the correct format
+    const imagePart = {
+      inlineData: {
+        data: imageBase64,
+        mimeType: imageResponse.headers["content-type"] || "image/jpeg",
       },
     };
 
@@ -424,11 +569,12 @@ async function analyzeUploadWithAI(uploadId, imageUrl, category, description) {
     IMPORTANT: If this is NOT a mangrove ecosystem, set accuracy to 0 and explain why.
     `;
 
-    const result = await model.generateContent([prompt, imageData]);
+    // 3. Send the prompt and the image data to the model
+    const result = await model.generateContent([prompt, imagePart]);
     const response = await result.response;
     const text = response.text();
 
-    // Parse AI response
+    // ... The rest of your parsing and database update logic remains the same
     let aiResponse;
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -438,7 +584,6 @@ async function analyzeUploadWithAI(uploadId, imageUrl, category, description) {
         throw new Error("No JSON found in response");
       }
     } catch (parseError) {
-      // Fallback parsing
       const lowerText = text.toLowerCase();
       aiResponse = {
         accuracy: lowerText.includes("mangrove") ? 60 : 0,
@@ -451,7 +596,6 @@ async function analyzeUploadWithAI(uploadId, imageUrl, category, description) {
       };
     }
 
-    // Validate and process AI response
     const validatedAnalysis = {
       status: "completed",
       accuracy: Math.min(Math.max(Number(aiResponse.accuracy) || 0, 0), 100),
@@ -476,12 +620,10 @@ async function analyzeUploadWithAI(uploadId, imageUrl, category, description) {
       analyzedAt: new Date(),
     };
 
-    // Calculate rewards
     const upload = await Upload.findById(uploadId);
     const points = upload.calculatePoints();
     const badges = upload.assignBadges();
 
-    // Update upload with AI analysis and rewards
     await Upload.findByIdAndUpdate(uploadId, {
       aiAnalysis: validatedAnalysis,
       "rewards.points": points,
@@ -491,7 +633,6 @@ async function analyzeUploadWithAI(uploadId, imageUrl, category, description) {
       status: points >= 30 ? "approved" : "rejected",
     });
 
-    // Update user's total points
     await User.findByIdAndUpdate(upload.userId, {
       $inc: { totalPoints: points },
     });
