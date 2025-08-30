@@ -87,7 +87,7 @@ async function analyzeImageWithAI(imageUrl, reportType, description) {
       throw new Error('Gemini API key not configured');
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `
     You are a mangrove conservation expert. Analyze this image specifically for mangrove-related incidents.
@@ -161,7 +161,7 @@ async function analyzeImageWithAI(imageUrl, reportType, description) {
       recommendations: String(aiResponse.recommendations || 'Image appears suitable'),
       mangroveEvidence: String(aiResponse.mangroveEvidence || 'Mangrove evidence not clearly identified'),
       timestamp: new Date(),
-      model: 'gemini-pro-vision'
+      model: 'gemini-2.0-flash'
     };
 
     return validatedResponse;

@@ -158,9 +158,9 @@ const validateUpload = [
     .isLength({ min: 10, max: 500 })
     .withMessage('Description must be between 10 and 500 characters'),
   
-  body('imageUrl')
-    .isURL()
-    .withMessage('Please provide a valid image URL'),
+  body('imageBase64')
+    .notEmpty()
+    .withMessage('Image data is required'),
   
   body('category')
     .isIn(['mangrove_health', 'mangrove_destruction', 'mangrove_conservation', 'mangrove_research', 'other'])
@@ -184,7 +184,9 @@ const validateUpload = [
     .isString()
     .trim()
     .isLength({ min: 1, max: 20 })
-    .withMessage('Each tag must be between 1 and 20 characters')
+    .withMessage('Each tag must be between 1 and 20 characters'),
+  
+  handleValidationErrors
 ];
 
 module.exports = {

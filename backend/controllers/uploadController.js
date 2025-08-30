@@ -1,6 +1,7 @@
 const Upload = require('../models/Upload');
 const User = require('../models/User');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const mongoose = require('mongoose'); // Added for mongoose.Types.ObjectId
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -10,12 +11,24 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // @access  Private
 exports.uploadImage = async (req, res) => {
   try {
-    const { title, description, imageUrl, category, lat, lng, tags } = req.body;
+    const { title, description, imageBase64, category, lat, lng, tags } = req.body;
+    
+    // Check if image data exists
+    if (!imageBase64) {
+      return res.status(400).json({
+        success: false,
+        message: 'Image data is required'
+      });
+    }
+
+    // For now, we'll store the base64 image directly in the database
+    // In production, you might want to compress or resize the image
+    const imageUrl = `data:image/jpeg;base64,${imageBase64}`;
 
     // Create location coordinates
     const location = {
       type: 'Point',
-      coordinates: [lng, lat]
+      coordinates: [parseFloat(lng), parseFloat(lat)]
     };
 
     // Create upload
@@ -55,11 +68,13 @@ exports.uploadImage = async (req, res) => {
 // @access  Private
 exports.getUserUploads = async (req, res) => {
   try {
-    const { status, category, page = 1, limit = 10 } = req.query;
+    const { status, category, page = 1, limit = 50 } = req.query;
     
     const filter = { userId: req.user.id };
-    if (status) filter.status = status;
-    if (category) filter.category = category;
+    if (status && status !== 'all') filter.status = status;
+    if (category && category !== 'all') filter.category = category;
+
+    console.log(`Fetching uploads for user ${req.user.id} with filter:`, filter);
 
     const uploads = await Upload.find(filter)
       .populate('userId', 'name email role')
@@ -69,12 +84,14 @@ exports.getUserUploads = async (req, res) => {
 
     const total = await Upload.countDocuments(filter);
 
+    console.log(`Found ${uploads.length} uploads out of ${total} total for user ${req.user.id}`);
+
     res.status(200).json({
       success: true,
       count: uploads.length,
       total,
       totalPages: Math.ceil(total / limit),
-      currentPage: page,
+      currentPage: parseInt(page),
       data: uploads
     });
 
@@ -83,6 +100,72 @@ exports.getUserUploads = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error while fetching uploads'
+    });
+  }
+};
+
+// @desc    Get user upload statistics
+// @route   GET /uploads/stats
+// @access  Private
+exports.getUserUploadStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Get basic counts
+    const totalUploads = await Upload.countDocuments({ userId });
+    const pendingUploads = await Upload.countDocuments({ userId, status: 'pending' });
+    const approvedUploads = await Upload.countDocuments({ userId, status: 'approved' });
+    const rejectedUploads = await Upload.countDocuments({ userId, status: 'rejected' });
+    
+    // Get points and rewards
+    const uploadsWithRewards = await Upload.find({ userId, 'rewards.points': { $gt: 0 } });
+    const totalPoints = uploadsWithRewards.reduce((sum, upload) => sum + (upload.rewards.points || 0), 0);
+    
+    // Get AI analysis stats
+    const completedAnalysis = await Upload.find({ 
+      userId, 
+      'aiAnalysis.status': 'completed' 
+    });
+    
+    const avgAccuracy = completedAnalysis.length > 0 
+      ? completedAnalysis.reduce((sum, upload) => sum + (upload.aiAnalysis.accuracy || 0), 0) / completedAnalysis.length
+      : 0;
+    
+    // Get category distribution
+    const categoryStats = await Upload.aggregate([
+      { $match: { userId: mongoose.Types.ObjectId(userId) } },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+
+    const recentActivity = await Upload.find({ userId })
+      .sort({ uploadDate: -1 })
+      .limit(5)
+      .select('title status uploadDate category');
+
+    const stats = {
+      totalUploads,
+      pendingUploads,
+      approvedUploads,
+      rejectedUploads,
+      totalPoints: Math.round(totalPoints),
+      avgAccuracy: Math.round(avgAccuracy),
+      categoryDistribution: categoryStats,
+      recentActivity
+    };
+
+    console.log(`Upload stats for user ${userId}:`, stats);
+
+    res.status(200).json({
+      success: true,
+      data: stats
+    });
+
+  } catch (error) {
+    console.error('Get upload stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching upload statistics'
     });
   }
 };
@@ -253,7 +336,15 @@ async function analyzeUploadWithAI(uploadId, imageUrl, category, description) {
       return;
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-pro-vision" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+    // Convert base64 to image data for AI analysis
+    const imageData = {
+      inlineData: {
+        data: imageUrl.replace('data:image/jpeg;base64,', ''),
+        mimeType: "image/jpeg"
+      }
+    };
 
     const prompt = `
     You are a mangrove conservation expert. Analyze this image for mangrove-related content.
@@ -286,7 +377,7 @@ async function analyzeUploadWithAI(uploadId, imageUrl, category, description) {
     IMPORTANT: If this is NOT a mangrove ecosystem, set accuracy to 0 and explain why.
     `;
 
-    const result = await model.generateContent([prompt, imageUrl]);
+    const result = await model.generateContent([prompt, imageData]);
     const response = await result.response;
     const text = response.text();
 

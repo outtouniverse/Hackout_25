@@ -141,7 +141,7 @@ The system automatically analyzes uploaded images using Google Gemini AI to:
   "issues": "Any problems identified",
   "recommendations": "How to improve the image",
   "timestamp": "Analysis timestamp",
-  "model": "gemini-pro-vision"
+  "model": "gemini-2.0-flash"
 }
 ```
 

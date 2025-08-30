@@ -6,13 +6,13 @@ const { validateUpload } = require('../middleware/validate');
 const {
   uploadImage,
   getUserUploads,
+  getUserUploadStats,
   getUpload,
   getAIAnalysis,
   getUploadLeaderboard,
   getAllUploads,
   reviewUpload
 } = require('../controllers/uploadController'); 
-
 
 // Public routes (if any)
 router.get('/leaderboard', getUploadLeaderboard);
@@ -23,6 +23,7 @@ router.use(protect);
 // User upload routes
 router.post('/', validateUpload, uploadImage);
 router.get('/', getUserUploads);
+router.get('/stats', getUserUploadStats);
 router.get('/:id', getUpload);
 router.get('/:id/ai-analysis', getAIAnalysis);
 
